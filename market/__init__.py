@@ -1,6 +1,8 @@
 import os
-from flask import Flask, render_template
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
+from flask_login import LoginManager
 
 app = Flask(__name__)
 
@@ -10,5 +12,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'fee6fe778ae479d162c8c104'
 db = SQLAlchemy(app)
-
+bcrypt = Bcrypt(app)
+login_manager = LoginManager(app)
 from market import routes   
