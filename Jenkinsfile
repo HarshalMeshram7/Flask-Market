@@ -3,15 +3,18 @@ pipeline {
 
     environment {
         IMAGE_NAME = "harshalmeshram/flaskmarket:${BUILD_ID}"
+        CONTAINER_NAME = "flask-market-container"
+        APP_PORT = "5000"
     }
 
     stages {
         stage('Clone Repo') {
             steps {
-                git branch: 'main', credentialsId: 'github-creds', url: 'https://github.com/HarshalMeshram7/Flask-Market.git'
+                git branch: 'main',
+                    credentialsId: 'github-creds',
+                    url: 'https://github.com/HarshalMeshram7/Flask-Market.git'
             }
-    }
-
+        }
 
         stage('Build Docker Image') {
             steps {
@@ -21,7 +24,11 @@ pipeline {
 
         stage('Login to DockerHub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
                     sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
                 }
             }
@@ -33,9 +40,9 @@ pipeline {
             }
         }
 
-        stage('Remove Local Image (simulate pull step)') {
+        stage('Remove Local Image') {
             steps {
-                sh 'docker rmi $IMAGE_NAME'
+                sh 'docker rmi $IMAGE_NAME || true'
             }
         }
 
@@ -43,10 +50,20 @@ pipeline {
             steps {
                 sh '''
                     docker pull $IMAGE_NAME
-                    docker stop flask-container || true && docker rm flask-container || true
-                    docker run -d --name flask-container -p 5000:5000 $IMAGE_NAME
+                    docker stop $CONTAINER_NAME || true
+                    docker rm $CONTAINER_NAME || true
+                    docker run -d --name $CONTAINER_NAME -p $APP_PORT:5000 $IMAGE_NAME
                 '''
             }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployed at http://<your-server-ip>:${APP_PORT}"
+        }
+        failure {
+            echo '❌ Build or deployment failed. Check logs.'
         }
     }
 }
