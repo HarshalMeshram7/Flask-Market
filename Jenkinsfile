@@ -1,5 +1,5 @@
 pipeline {
-    agent any
+    agent none // No default agent; specify per stage
 
     environment {
         IMAGE_NAME = "harshalmeshram/flaskmarket:${BUILD_ID}"
@@ -9,6 +9,7 @@ pipeline {
 
     stages {
         stage('Clone Repo') {
+            agent any // Use default Jenkins agent for non-Docker steps
             steps {
                 git branch: 'main',
                     credentialsId: 'github-creds',
@@ -17,12 +18,24 @@ pipeline {
         }
 
         stage('Build Docker Image') {
+            agent {
+                docker {
+                    image 'docker:20.10' // Docker image with CLI
+                    args '-v /var/run/docker.sock:/var/run/docker.sock --user root' // Run as root, mount Docker socket
+                }
+            }
             steps {
                 sh 'docker build -t $IMAGE_NAME .'
             }
         }
 
         stage('Login to DockerHub') {
+            agent {
+                docker {
+                    image 'docker:20.10'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock --user root'
+                }
+            }
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
@@ -35,18 +48,36 @@ pipeline {
         }
 
         stage('Push to DockerHub') {
+            agent {
+                docker {
+                    image 'docker:20.10'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock --user root'
+                }
+            }
             steps {
                 sh 'docker push $IMAGE_NAME'
             }
         }
 
         stage('Remove Local Image') {
+            agent {
+                docker {
+                    image 'docker:20.10'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock --user root'
+                }
+            }
             steps {
                 sh 'docker rmi $IMAGE_NAME || true'
             }
         }
 
         stage('Pull and Run Container') {
+            agent {
+                docker {
+                    image 'docker:20.10'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock --user root'
+                }
+            }
             steps {
                 sh '''
                     docker pull $IMAGE_NAME
